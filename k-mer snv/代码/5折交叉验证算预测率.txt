@@ -1,8 +1,7 @@
 import time
 from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, precision_score
-
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, precision_score, roc_auc_score
 import pandas as pd
 from ast import literal_eval
 import numpy as np
@@ -10,13 +9,12 @@ from io import StringIO
 from contextlib import redirect_stdout
 
 def format_time(seconds):
-    # 将秒数格式化为时分秒的形式
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
     return f"{int(h)}时{int(m)}分{int(s)}秒"
 
 # 读取CSV文件
-file_path = r'C:\python-learn\练习.csv'  # 替换为你的CSV文件路径
+file_path = r'C:\\Users\\huangmochao\\Desktop\\练习.csv'  # 替换为你的CSV文件路径
 data = pd.read_csv(file_path, header=None)
 
 # 处理第二列数据的字符串表示
@@ -26,23 +24,21 @@ data[1] = data[1].apply(lambda x: literal_eval(x))
 X = np.array(data[1].tolist())
 Y = data.iloc[:, 0]
 
-# 划分训练集和测试集
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
+# 确保训练集和测试集类别分布一致（分层抽样）
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42, stratify=Y)
 
-# 获取Y_test数据集的长度
-y_test_length = len(Y_test)
-print(f"\nY_test数据集的长度: {y_test_length}")
+# 确认测试集类别是否与训练集一致
+# print(f"训练集类别分布: {Y_train.value_counts().to_dict()}")
+# print(f"测试集类别分布: {Y_test.value_counts().to_dict()}")
 
-# 初始化随机森林分类器（可以根据需要选择其他分类器）
-# 初始化随机森林分类器，指定树的数量为20
-classifier = RandomForestClassifier(n_estimators=20, max_depth=30, random_state=42)
+# 初始化随机森林分类器
+classifier = RandomForestClassifier(n_estimators=100, max_depth=30, random_state=42)
 
 # 创建自定义输出流
 output_stream = StringIO()
 
 # 重定向标准输出到自定义输出流
 with redirect_stdout(output_stream):
-    # 记录训练集开始时间
     train_start_time = time.perf_counter()
 
     # 进行五折交叉验证并预测
@@ -51,10 +47,7 @@ with redirect_stdout(output_stream):
     # 计算准确率
     accuracy = cross_val_score(classifier, X_train, Y_train, cv=5, scoring='accuracy').mean()
 
-    # 记录训练集结束时间
     train_end_time = time.perf_counter()
-
-    # 计算训练集用时
     train_time = train_end_time - train_start_time
     formatted_train_time = format_time(train_time)
     print(f"训练集用时: {formatted_train_time}")
@@ -62,61 +55,58 @@ with redirect_stdout(output_stream):
     # 计算混淆矩阵
     conf_matrix = confusion_matrix(Y_train, cv_predictions)
 
-# 将混淆矩阵的数字写入CSV文件 '对.csv'
+# 将混淆矩阵写入CSV文件 '对.csv'
 conf_matrix_df = pd.DataFrame(conf_matrix)
 conf_matrix_df.to_csv('对.csv', mode='w', index=False, header=False, encoding='utf-8-sig')
 
-# 追加写入训练集准确率和用时
+# 追加训练集准确率和用时
 with open('对.csv', 'a', encoding='utf-8-sig') as f:
     f.write(f'\n训练集准确率,{accuracy}\n')
     f.write(f'训练集用时,{formatted_train_time}\n')
 
-# 记录测试集开始时间
+# 测试集评估
 test_start_time = time.perf_counter()
-
-# 在测试集上评估模型
-test_predictions = classifier.fit(X_train, Y_train).predict(X_test)
-
-# 记录测试集结束时间
+classifier.fit(X_train, Y_train)
+test_predictions = classifier.predict(X_test)
+test_pred_proba = classifier.predict_proba(X_test)
 test_end_time = time.perf_counter()
 
-# 计算测试集用时
 test_time = test_end_time - test_start_time
 formatted_test_time = format_time(test_time)
 print(f"测试集用时: {formatted_test_time}")
 
-# 计算混淆矩阵
+# 测试集混淆矩阵
 test_conf_matrix = confusion_matrix(Y_test, test_predictions)
-
-# 追加写入测试集混淆矩阵和用时
 with open('对.csv', 'a', encoding='utf-8-sig') as f:
     f.write('\n\n测试集混淆矩阵\n')
     np.savetxt(f, test_conf_matrix, delimiter=',', fmt='%d')
     f.write(f'测试集用时,{formatted_test_time}\n')
 
-# 计算每个类别的精确度
-precision_per_class = precision_score(Y_test, test_predictions, average=None)  # 修改
-
-# 输出每个类别的精确度
+# 每个类别的精确度
+precision_per_class = precision_score(Y_test, test_predictions, average=None)
 for i, precision in enumerate(precision_per_class):
     print(f"类别 {i} 的准确率: {precision}")
 
-# 计算分类报告
+# 分类报告
 report = classification_report(Y_test, test_predictions, zero_division=1)
-
-# 输出分类报告
 print("分类报告:\n", report)
-
-# 将分类报告写入文件 '对.csv'
 with open('对.csv', 'a', encoding='utf-8-sig') as f:
     f.write('\n\n分类报告\n')
     f.write(report)
 
-# 追加写入测试集准确率
+# 确保类别匹配并计算 AUC
+from sklearn.preprocessing import LabelBinarizer
+lb = LabelBinarizer()
+lb.fit(Y_train)
+y_test_encoded = lb.transform(Y_test)
+if y_test_encoded.shape[1] == 1:  # 特殊处理单类别情况
+    y_test_encoded = np.hstack([1 - y_test_encoded, y_test_encoded])
+auc_score = roc_auc_score(y_test_encoded, test_pred_proba, multi_class='ovr')
+print(f"测试集 AUC: {auc_score}")
 with open('对.csv', 'a', encoding='utf-8-sig') as f:
-    f.write(f'\n测试集准确率,{accuracy}\n')
+    f.write(f'\n测试集AUC,{auc_score}\n')
 
-# 追加写入测试集中被错误预测的实例信息
+# 错误预测实例信息
 test_incorrect_indices = np.where(Y_test != test_predictions)[0]
 with open('对.csv', 'a', encoding='utf-8-sig') as f:
     for idx in test_incorrect_indices:
@@ -125,7 +115,6 @@ with open('对.csv', 'a', encoding='utf-8-sig') as f:
         row_number = Y_test.index[idx]
         f.write(f'{instance_class},{predicted_class},{row_number}\n')
 
-# 将被错误预测的实例数据写入文件 '错.txt'
 output_file_path = '错.txt'
 test_incorrect_instances_df = data.iloc[Y_test.index[test_incorrect_indices]]
 test_incorrect_instances_df.to_csv(output_file_path, index=False, header=None, mode='w', encoding='utf-8-sig')
