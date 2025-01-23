@@ -1,0 +1,118 @@
+import itertools
+import pandas as pd
+
+def process_dna_string(dna_string, num_parts, chars_per_part):
+    # 计算字符串长度
+    length = len(dna_string)
+    # 计算每一份的长度
+    part_length = length // num_parts
+    # 初始化结果列表
+    results = []
+
+    # 对每一份进行处理
+    for i in range(num_parts):
+        start = i * part_length
+        end = start + part_length if i < num_parts - 1 else length
+        part = dna_string[start:end]
+
+        # 调用函数并获取结果
+        part_results = count_pairs(part, chars_per_part) + count_pairs_and_average_position(part, chars_per_part) + count_pairs_and_calculate_variance(
+            part, chars_per_part)
+
+        # 将结果添加到列表中
+        results.extend(part_results)
+
+    # 返回最终结果
+    return results
+
+def count_pairs(dna_string, chars_per_part):
+    # 创建一个字典来存储所有可能的k字符配对及其计数
+    pairs = {}
+
+    # 生成所有可能的k字符配对
+    all_kmers = [''.join(chars) for chars in itertools.product('ACGT', repeat=chars_per_part)]
+
+    # 初始化字典，将所有k字符配对的计数初始化为0
+    pairs = {k: 0 for k in all_kmers}
+
+    # 遍历DNA字符串，每次取k个字符
+    for i in range(len(dna_string) - chars_per_part + 1):
+        kmer = dna_string[i:i + chars_per_part]
+        if kmer in pairs:
+            pairs[kmer] += 1
+
+    # 返回配对计数
+    return list(pairs.values())
+
+def count_pairs_and_average_position(dna_string, chars_per_part):
+    # 创建一个字典来存储所有可能的k字符配对及其计数和位置之和
+    pairs = {}
+
+    # 生成所有可能的k字符配对
+    all_kmers = [''.join(chars) for chars in itertools.product('ACGT', repeat=chars_per_part)]
+
+    # 初始化字典，将所有k字符配对的计数和位置之和初始化为0
+    pairs = {k: [0, 0] for k in all_kmers}
+
+    # 遍历DNA字符串，每次取k个字符
+    for i in range(len(dna_string) - chars_per_part + 1):
+        kmer = dna_string[i:i + chars_per_part]
+        if kmer in pairs:
+            pairs[kmer][0] += 1
+            pairs[kmer][1] += i + 1
+
+    # 计算每个配对的平均位置
+    averages = []
+    for pair in pairs.values():
+        if pair[0] > 0:
+            averages.append(pair[1] / pair[0])
+        else:
+            averages.append(0)
+
+    # 返回平均位置
+    return averages
+
+def count_pairs_and_calculate_variance(dna_string, chars_per_part):
+    # 创建一个字典来存储所有可能的k字符配对及其计数和位置列表
+    pairs = {}
+
+    # 生成所有可能的k字符配对
+    all_kmers = [''.join(chars) for chars in itertools.product('ACGT', repeat=chars_per_part)]
+
+    # 初始化字典，将所有k字符配对的计数和位置列表初始化为0
+    pairs = {k: [0, []] for k in all_kmers}
+
+    # 遍历DNA字符串，每次取k个字符
+    for i in range(len(dna_string) - chars_per_part + 1):
+        kmer = dna_string[i:i + chars_per_part]
+        if kmer in pairs:
+            pairs[kmer][0] += 1
+            pairs[kmer][1].append(i + 1)
+
+    # 计算每个配对的方差
+    variances = []
+    for count, positions in pairs.values():
+        if count > 1:
+            mean = sum(positions) / count
+            variance = sum((p - mean) ** 2 for p in positions) / (count * len(dna_string))
+            variances.append(variance)
+        else:
+            variances.append(0)
+
+    # 返回方差
+    return variances
+
+# 获取用户输入
+num_parts = int(input("将序列分为几份l: "))
+chars_per_part = int(input("每次取几个字符k: "))
+
+# 使用绝对路径
+file_path = r'C:\python-learn\练习.csv'
+
+# CSV文件处理代码
+df = pd.read_csv(file_path, header=None)
+# 处理第二列的DNA字符串，并将结果写入第三列
+df[2] = df[1].apply(lambda x: process_dna_string(x, num_parts, chars_per_part))
+
+# 将结果写回CSV文件
+df.to_csv(file_path, index=False, header=False)

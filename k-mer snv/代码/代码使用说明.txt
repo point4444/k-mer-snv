@@ -1,0 +1,9 @@
+第一步：打开"输入k和l算矩阵.txt"文件代码，这是python代码。打开对应数据csv文件。例如打开species.csv文件，提取当中关键字为species_name列和
+第五列sequence这两列数据复制到一个新的csv文件中然后删去第一行关键字species_name和sequence。
+新的csv文件就是我们第一个python代码所需要的csv文件，然后运行代码，输入想要的k和l的值，
+会生成一个新的csv文件，它是旧文件后面加了一列计算所得的矩阵结果。
+第二步：打开"5折交叉验证算预测率.txt"文件代码，这也是python代码。将第一步最后得到的
+新csv文件中删去第二列，然后运行代码，就可以得到最后模型的统计信息。
+第三步：总共我们进行六次这样的操作，每一次操作我们都打开相应的csv文件并将相应的关键字为species_name，genus_name，family_name，
+order_name，class_name，phylum_name所代表的列的信息提取出来，作为我们csv文件中的y值，然后对应的sequence列数据
+计算出来的矩阵作为x值。然后分析预测并检验模型的优劣性。
