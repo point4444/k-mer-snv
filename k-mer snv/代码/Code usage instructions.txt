@@ -1,0 +1,9 @@
+Step 1: Open the "Enter k and l matrix. txt" file code, which is Python code. Open the corresponding CSV file for the data. For example, open the species.csv file and extract the keywords from the species_name column
+Copy the data from the fifth column 'sequence' to a new CSV file and remove the keywords' species_name 'and' sequence 'from the first row.
+The new CSV file is the CSV file required for our first Python code, then run the code and enter the desired values of k and l,
+A new CSV file will be generated, which is the matrix result obtained by adding a column after the old file.
+Step 2: Open the "50% Cross Validation Prediction Rate. txt" file code, which is also Python code. Obtain the final result from the first step
+Remove the second column from the new CSV file and run the code to obtain the statistical information of the final model.
+Step 3: We perform this operation six times in total, and for each operation, we open the corresponding CSV file and use the corresponding keyword 'species_name', genus_name，family_name，
+Extract the information of the columns represented by order_2, class_2, and phylum_2 as the y values in our CSV file, and then correspond to the sequence column data
+The calculated matrix serves as the value of x. Then analyze and predict, and test the superiority and inferiority of the model.
